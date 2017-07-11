@@ -1,0 +1,35 @@
+{
+  "name": "bentools/guzzle-throttle-middleware",
+  "description": "A GuzzleHTTP Middleware that can delay requests before sending them.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "bpolaszek",
+      "email": "bpolaszek@gmail.com"
+    }
+  ],
+  "require": {
+    "guzzlehttp/guzzle": "^6.0",
+    "bentools/psr7-request-matcher": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "@stable",
+    "squizlabs/php_codesniffer": "@stable",
+    "satooshi/php-coveralls": "@stable",
+    "symfony/var-dumper": "^3.3",
+    "bentools/guzzle-duration-middleware": "^1.0",
+    "psr/cache": "^1.0",
+    "symfony/cache": "^3.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "BenTools\\GuzzleHttp\\Middleware\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "files": [
+      "vendor/symfony/var-dumper/Resources/functions/dump.php"
+    ]
+  }
+}
