@@ -21,8 +21,7 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
 
     /**
      * Counter constructor.
-     * @param float $startTime
-     * @param int $nbRequests
+     * @param float $expiresIn
      */
     public function __construct(float $expiresIn)
     {
