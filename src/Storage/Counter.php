@@ -5,6 +5,11 @@ namespace BenTools\GuzzleHttp\Middleware\Storage;
 class Counter implements \Serializable, \JsonSerializable, \Countable
 {
     /**
+     * @var bool
+     */
+    private $useMicroseconds;
+
+    /**
      * @var float
      */
     private $expiresIn;
@@ -25,14 +30,20 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
      */
     public function __construct(float $expiresIn)
     {
-        $this->expiresIn = $expiresIn;
+        $this->useMicroseconds = intval($expiresIn) != $expiresIn;
+        $this->expiresIn = $this->useMicroseconds ? $expiresIn : intval($expiresIn);
         $this->reset();
     }
 
-    private function reset()
+    private function now()
+    {
+        return $this->useMicroseconds ? microtime(true) : time();
+    }
+
+    public function reset()
     {
         $this->counter = 0;
-        $this->expiresAt = microtime(true) + $this->expiresIn;
+        $this->expiresAt = null;
     }
 
     /**
@@ -40,10 +51,9 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
      */
     public function increment()
     {
-        if ($this->isExpired()) {
-            $this->reset();
-        } else {
-            $this->counter++;
+        $this->counter++;
+        if (1 === $this->counter) {
+            $this->expiresAt = $this->now() + $this->expiresIn;
         }
     }
 
@@ -63,7 +73,7 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
      */
     public function getRemainingTime()
     {
-        return (float) max(0, $this->expiresAt - microtime(true));
+        return (float) max(0, $this->expiresAt - $this->now());
     }
 
     /**
@@ -71,7 +81,7 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
      */
     public function isExpired()
     {
-        return 0.0 === $this->getRemainingTime();
+        return null !== $this->expiresAt && 0.0 === $this->getRemainingTime();
     }
 
     /**
@@ -91,6 +101,7 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
         $this->expiresAt = $data['e'];
         $this->expiresIn = $data['i'];
         $this->counter = $data['n'];
+        $this->useMicroseconds = $data['m'];
     }
 
     /**
@@ -99,9 +110,23 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
     public function jsonSerialize()
     {
         return [
+            'm' => $this->useMicroseconds,
             'i' => $this->expiresIn,
             'e' => $this->expiresAt,
             'n' => $this->counter,
+        ];
+    }
+
+    public function __debugInfo()
+    {
+        return [
+            'counter' => $this->counter,
+            'microseconds' => $this->useMicroseconds,
+            'expiresIn' => $this->expiresIn,
+            'expiresAt' => $this->expiresAt,
+            'now' => $this->now(),
+            'remaining' => $this->useMicroseconds ? $this->getRemainingTime() : round($this->getRemainingTime()),
+            'expired' => $this->isExpired(),
         ];
     }
 }

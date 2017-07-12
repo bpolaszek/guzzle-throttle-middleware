@@ -41,24 +41,34 @@ class ThrottleMiddleware
         return function (RequestInterface $request, array $options) use ($handler) {
             foreach ($this->configurations as $configuration) {
                 if ($configuration->matchRequest($request)) {
-                    if (!$this->storage->hasCounter($configuration->getStorageKey())) {
-                        $counter = new Counter($configuration->getDuration());
-                        $counter->increment();
-                        $this->storage->saveCounter($configuration->getStorageKey(), $counter, $configuration->getDuration());
-                    } else {
-                        $counter = $this->storage->getCounter($configuration->getStorageKey());
-
-                        if ($counter->count() >= $configuration->getMaxRequests()) {
-                            usleep($counter->getRemainingTime() * 1000000);
-                        } else {
-                            $counter->increment();
-                            $this->storage->saveCounter($configuration->getStorageKey(), $counter);
-                        }
-                    }
+                    $this->processConfiguration($configuration);
                     break;
                 }
             }
             return $handler($request, $options);
         };
+    }
+
+    private function processConfiguration(ThrottleConfiguration $configuration)
+    {
+        try {
+            $counter = $this->storage->getCounter($configuration->getStorageKey());
+        } catch (\TypeError $e) {
+            $counter = new Counter($configuration->getDuration());
+        }
+
+        if (!$counter->isExpired()) {
+            if ($counter->count() >= $configuration->getMaxRequests()) {
+                $microDuration = $configuration->getDuration() * 1000000;
+                usleep(random_int(min(50000, $microDuration), ($microDuration))); // Add some randomness to help shared storage
+                $this->processConfiguration($configuration);
+                return;
+            }
+        } else {
+            $counter->reset();
+        }
+
+        $counter->increment();
+        $this->storage->saveCounter($configuration->getStorageKey(), $counter, $configuration->getDuration());
     }
 }
