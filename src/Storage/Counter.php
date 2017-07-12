@@ -2,48 +2,77 @@
 
 namespace BenTools\GuzzleHttp\Middleware\Storage;
 
-class Counter implements \Serializable, \JsonSerializable
+class Counter implements \Serializable, \JsonSerializable, \Countable
 {
     /**
      * @var float
      */
-    private $startTime;
+    private $expiresIn;
+
+    /**
+     * @var float
+     */
+    private $expiresAt;
 
     /**
      * @var int
      */
-    private $nbRequests = 0;
+    private $counter;
 
     /**
      * Counter constructor.
      * @param float $startTime
      * @param int $nbRequests
      */
-    public function __construct(float $startTime = null, int $nbRequests = 0)
+    public function __construct(float $expiresIn)
     {
-        $this->startTime = $startTime ?? microtime(true);
-        $this->nbRequests = $nbRequests;
+        $this->expiresIn = $expiresIn;
+        $this->reset();
+    }
+
+    private function reset()
+    {
+        $this->counter = 0;
+        $this->expiresAt = microtime(true) + $this->expiresIn;
     }
 
     /**
-     * @return int
+     * Increment counter.
      */
-    public function getStartTime(): float
-    {
-        return $this->startTime;
-    }
-
-    /**
-     * @return int
-     */
-    public function getNbRequests(): int
-    {
-        return $this->nbRequests;
-    }
-
     public function increment()
     {
-        $this->nbRequests++;
+        if ($this->isExpired()) {
+            $this->reset();
+        } else {
+            $this->counter++;
+        }
+    }
+
+    /**
+     * @return int
+     */
+    public function count(): int
+    {
+        if ($this->isExpired()) {
+            $this->reset();
+        }
+        return $this->counter;
+    }
+
+    /**
+     * @return float
+     */
+    public function getRemainingTime()
+    {
+        return (float) max(0, $this->expiresAt - microtime(true));
+    }
+
+    /**
+     * @return bool
+     */
+    public function isExpired()
+    {
+        return 0.0 === $this->getRemainingTime();
     }
 
     /**
@@ -60,8 +89,9 @@ class Counter implements \Serializable, \JsonSerializable
     public function unserialize($serialized)
     {
         $data = json_decode($serialized, true);
-        $this->startTime = $data['t'];
-        $this->nbRequests = $data['n'];
+        $this->expiresAt = $data['e'];
+        $this->expiresIn = $data['i'];
+        $this->counter = $data['n'];
     }
 
     /**
@@ -70,8 +100,9 @@ class Counter implements \Serializable, \JsonSerializable
     public function jsonSerialize()
     {
         return [
-            't' => $this->startTime,
-            'n' => $this->nbRequests,
+            'i' => $this->expiresIn,
+            'e' => $this->expiresAt,
+            'n' => $this->counter,
         ];
     }
 }

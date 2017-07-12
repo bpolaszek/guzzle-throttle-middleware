@@ -4,22 +4,27 @@ namespace BenTools\GuzzleHttp\Middleware\Storage;
 
 interface ThrottleStorageInterface
 {
+    /**
+     * @param string $storageKey
+     * @return bool
+     */
+    public function hasCounter(string $storageKey): bool;
 
     /**
      * @param string $storageKey
      * @return Counter
      */
-    public function getCounter(string $storageKey): Counter;
+    public function getCounter(string $storageKey);
 
     /**
      * @param string  $storageKey
      * @param Counter $counter
-     * @param int     $ttl
+     * @param float   $ttl
      */
-    public function saveCounter(string $storageKey, Counter $counter, int $ttl);
+    public function saveCounter(string $storageKey, Counter $counter, float $ttl = null);
 
     /**
      * @param string $storageKey
      */
-    public function resetCounter(string $storageKey);
+    public function deleteCounter(string $storageKey);
 }

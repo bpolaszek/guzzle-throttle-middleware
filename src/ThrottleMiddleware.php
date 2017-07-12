@@ -35,26 +35,6 @@ class ThrottleMiddleware
         $this->configurations[$configuration->getStorageKey()] = $configuration;
     }
 
-    /**
-     * @param ThrottleConfiguration $configuration
-     * @param Counter               $counter
-     * @return bool
-     */
-    private function shouldThrottle(ThrottleConfiguration $configuration, Counter $counter): bool
-    {
-        return $counter->getNbRequests() >= $configuration->getMaxRequests();
-    }
-
-    /**
-     * @param ThrottleConfiguration $configuration
-     * @param Counter               $counter
-     * @return float
-     */
-    public function getRemainingTime(ThrottleConfiguration $configuration, Counter $counter): float
-    {
-        $remaining = ($counter->getStartTime() + $configuration->getDuration()) - microtime(true);
-        return (float) max(0, $remaining);
-    }
 
     public function __invoke(callable $handler)
     {
@@ -62,15 +42,19 @@ class ThrottleMiddleware
             foreach ($this->configurations as $configuration) {
                 // Request match - Check if we need to throttle
                 if ($configuration->matchRequest($request)) {
-                    $counter = $this->storage->getCounter($configuration->getStorageKey());
-                    $remainingTime = $this->getRemainingTime($configuration, $counter);
-
-                    if ($this->shouldThrottle($configuration, $counter)) {
-                        usleep($remainingTime * 1000000);
-                        $this->storage->resetCounter($configuration->getStorageKey());
-                    } else {
+                    if (!$this->storage->hasCounter($configuration->getStorageKey())) {
+                        $counter = new Counter($configuration->getDuration());
                         $counter->increment();
-                        $this->storage->saveCounter($configuration->getStorageKey(), $counter, ceil($remainingTime));
+                        $this->storage->saveCounter($configuration->getStorageKey(), $counter, $configuration->getDuration());
+                    } else {
+                        $counter = $this->storage->getCounter($configuration->getStorageKey());
+
+                        if ($counter->count() >= $configuration->getMaxRequests()) {
+                            usleep($counter->getRemainingTime() * 1000000);
+                        } else {
+                            $counter->increment();
+                            $this->storage->saveCounter($configuration->getStorageKey(), $counter);
+                        }
                     }
                     break;
                 }

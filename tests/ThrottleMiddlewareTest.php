@@ -18,6 +18,16 @@ use Psr\Http\Message\ResponseInterface;
 class ThrottleMiddlewareTest extends TestCase
 {
 
+    /**
+     * @var ArrayAdapter
+     */
+    private $adapter;
+
+    public function setUp()
+    {
+        $this->adapter = new ArrayAdapter();
+    }
+
     public function testMiddleware()
     {
         $maxRequests = 1;
@@ -32,7 +42,7 @@ class ThrottleMiddlewareTest extends TestCase
         $response = $client->get('/bar');
         $this->assertGreaterThan($this->getExpectedDuration($durationInSeconds), $this->getRequestDuration($response));
 
-        // The counter should have been reset
+        // The counter should exist and not block
         $response = $client->get('/baz');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
     }
@@ -44,34 +54,44 @@ class ThrottleMiddlewareTest extends TestCase
         $client = $this->createConfiguredClient($maxRequests, $durationInSeconds);
 
         // The counter should not exist: 0/3
+        $this->assertFalse($this->adapter->hasCounter('foo'));
         $response = $client->get('/php');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
 
         // The counter should exist: 1/3
+        $this->assertEquals(1, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/javascript');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
 
         // The counter should exist: 2/3
+        $this->assertEquals(2, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/html');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
 
         // The counter should exist and block: 3/3
+        $this->assertEquals(3, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/css');
         $this->assertGreaterThan($this->getExpectedDuration($durationInSeconds), $this->getRequestDuration($response));
 
+        usleep($durationInSeconds * 1000000);
+
         // The counter should have been reset: 0/3
+        $this->assertEquals(0, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/python');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
 
         // The counter should exist: 1/3
+        $this->assertEquals(1, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/java');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
 
         // The counter should exist: 2/3
+        $this->assertEquals(2, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/go');
         $this->assertLessThan(0.005, $this->getRequestDuration($response));
 
         // The counter should exist and block: 3/3
+        $this->assertEquals(3, $this->adapter->getCounter('foo')->count());
         $response = $client->get('/ruby');
         $this->assertGreaterThan($this->getExpectedDuration($durationInSeconds), $this->getRequestDuration($response));
     }
@@ -105,7 +125,7 @@ class ThrottleMiddlewareTest extends TestCase
         $stack = HandlerStack::create(function (RequestInterface $request, array $options) {
             return new FulfilledPromise(new Response());
         });
-        $middleware = new ThrottleMiddleware(new ArrayAdapter());
+        $middleware = new ThrottleMiddleware($this->adapter);
         $stack->push(new DurationHeaderMiddleware(), 'duration');
         $stack->push($middleware, 'throttle');
         $client = new Client([
