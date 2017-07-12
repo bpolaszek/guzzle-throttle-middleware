@@ -93,6 +93,17 @@ Tests
 > ./vendor/bin/phpunit
 
 
+Known issues
+------------
+Due to PHP's synchronous behaviour, remember that throttling means calling `sleep()` or `usleep()` functions, which will delay your entire script, and not only the current request.
+
+This means throttling will also block Guzzle's asynchronous requests when using `CurlMultiHandler`.
+
+To prevent this, you may have a look at [bentools/guzzle-queue-handler](https://github.com/bpolaszek/guzzle-queue-handler), a handler that delegates asynchronous requests to PHP workers (Beanstalk, RabbitMQ, Redis, ...).
+
+You can then enable throttling only on workers.
+
+
 See also
 --------
 
