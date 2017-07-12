@@ -21,7 +21,7 @@ class ArrayAdapter implements ThrottleStorageInterface
     /**
      * @inheritDoc
      */
-    public function getCounter(string $storageKey)
+    public function getCounter(string $storageKey): Counter
     {
         return $this->storage[$storageKey] ?? null;
     }

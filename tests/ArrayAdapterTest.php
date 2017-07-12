@@ -14,7 +14,6 @@ class ArrayAdapterTest extends TestCase
     {
         $storage = new ArrayAdapter();
         $this->assertFalse($storage->hasCounter('foo'));
-        $this->assertNull($storage->getCounter('foo'));
 
         $counter = new Counter(10);
         $counter->increment();
@@ -32,7 +31,7 @@ class ArrayAdapterTest extends TestCase
         $counter = $storage->getCounter('foo');
         $this->assertInstanceOf(Counter::class, $counter);
         $this->assertEquals(1, $counter->count());
-        $this->assertNull($storage->getCounter('bar'));
+        $this->assertFalse($storage->hasCounter('bar'));
         return $storage;
     }
 

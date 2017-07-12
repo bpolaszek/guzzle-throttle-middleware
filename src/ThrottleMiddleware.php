@@ -40,7 +40,6 @@ class ThrottleMiddleware
     {
         return function (RequestInterface $request, array $options) use ($handler) {
             foreach ($this->configurations as $configuration) {
-                // Request match - Check if we need to throttle
                 if ($configuration->matchRequest($request)) {
                     if (!$this->storage->hasCounter($configuration->getStorageKey())) {
                         $counter = new Counter($configuration->getDuration());

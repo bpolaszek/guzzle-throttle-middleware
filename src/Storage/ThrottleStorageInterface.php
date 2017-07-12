@@ -14,7 +14,7 @@ interface ThrottleStorageInterface
      * @param string $storageKey
      * @return Counter
      */
-    public function getCounter(string $storageKey);
+    public function getCounter(string $storageKey): Counter;
 
     /**
      * @param string  $storageKey

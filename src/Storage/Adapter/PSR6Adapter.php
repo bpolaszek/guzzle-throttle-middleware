@@ -36,7 +36,7 @@ class PSR6Adapter implements ThrottleStorageInterface
     /**
      * @inheritDoc
      */
-    public function getCounter(string $storageKey)
+    public function getCounter(string $storageKey): Counter
     {
         $item = $this->cacheItemPool->getItem($storageKey);
         if ($item->isHit()) {
