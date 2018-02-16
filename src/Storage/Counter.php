@@ -69,11 +69,15 @@ class Counter implements \Serializable, \JsonSerializable, \Countable
     }
 
     /**
-     * @return float
+     * @return int|float
      */
     public function getRemainingTime()
     {
-        return (float) max(0, $this->expiresAt - $this->now());
+        $remainingTime = (float) max(0, $this->expiresAt - $this->now());
+        if (false === $this->useMicroseconds) {
+            $remainingTime = ceil($remainingTime);
+        }
+        return $remainingTime;
     }
 
     /**
